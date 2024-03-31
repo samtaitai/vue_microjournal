@@ -1,10 +1,19 @@
 require('dotenv').config()
 const express = require('express')
 const app = express()
-const port = 3000
+const PORT = 3000
 const Post = require('./models/Post')
 const connectDB = require('./config/dbConn')
 const { default: mongoose } = require('mongoose')
+const controller = require('./controllers/controller')
+const cors = require('cors');
+const bodyParser = require('body-parser');
+
+//enable cors for all routes
+//because Vue dev server is localhost:5173 and node(backend) serve is localhost:3000
+app.use(cors());
+//to parse json data from the req.body
+app.use(bodyParser.json());
 
 //connect to mongodb
 connectDB();
@@ -13,21 +22,14 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 });
 
-app.get('/api/posts', async (req, res) => {
-    try {
-        const posts = await Post.find({});
-        res.json(posts);
-    }
-    catch (error) {
-        console.error('Error fetching posts:', error);
-        res.status(500).json({message: 'Internal server error'});
-    }
-})
+app.get('/posts', controller.getAllPosts);
+app.get('/post/:id', controller.getPostById);
+app.post('/posts', controller.insertPost);
 
 mongoose.connection.once('open', () => {
     console.log('Connected to MongoDB');
-    app.listen(port, () => {
-        console.log(`Example app listening on port ${port}`);
+    app.listen(PORT, () => {
+        console.log(`Example app listening on port ${PORT}`);
     });
 });
 

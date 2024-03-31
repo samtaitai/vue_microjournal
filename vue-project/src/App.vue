@@ -1,6 +1,7 @@
 <script setup>
   import Nav from './components/Nav.vue'
   import Post from './components/Post.vue'
+
   const date = new Date();
   const postsData = [
         {
