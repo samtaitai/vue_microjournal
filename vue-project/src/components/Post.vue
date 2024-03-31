@@ -14,7 +14,8 @@
         userId: '',
         userName: '',
         recordTime: null,
-        userText: ''
+        userText: '',
+        maskedUserText: ''
     };
     let posts = ref([]); 
     let post = ref({});
@@ -34,12 +35,14 @@
         axios.get('http://localhost:3000/posts')
         .then(response => { 
             posts.value = response.data; 
+            posts.value = posts.value.reverse();
         })
     };
     const saveEntry = () => {
         request.userId = '@admin';
         request.userName = 'admin';
         request.recordTime = new Date();
+        request.maskedUserText = maskString(request.userText);
 
         console.log('request before call', request);
         axios.post('http://localhost:3000/posts', request)
@@ -55,7 +58,7 @@
         return url;
     }
     const showTweet = () => {
-        //open new screen for a single post 
+        //reveal the masked 
         //this new page will be landing page 
     }
     const postItem = () => {
@@ -64,15 +67,12 @@
     const copyEntry = (entry) => {
         //this userText should be masked 
         var url = grabURL(entry._id);
-        var copiedString = entry.userText + " " + url;
+        var copiedString = entry.maskedUserText + " " + url;
         console.log(copiedString);
         return copiedString;
     }
     const maskString = (beforeString) => {
-        //before: this is [spoiler]
-        //after: this is ********
-        //find [ and ], replace each character inside [] into * <- shold be iterative, until the end
-        //return afterString
+        return beforeString.replace(/\[(.*?)\]/g, (_, match) => '*'.repeat(match.length));
 
     }
 
@@ -96,7 +96,7 @@
                     </div>
                 </div>
                 <div class="row fs-6">
-                    <div class="col">{{ post.userText }}</div>
+                    <div class="col">{{ post.maskedUserText }}</div>
                 </div>
                 <div class="d-flex justify-content-start">
                     <div class="mr-2">
