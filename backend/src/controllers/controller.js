@@ -28,13 +28,14 @@ exports.insertPost = async (req, res) => {
         /* either way should work 
         await newPost.save(); 
         */
-        const { userId, userName, recordTime, userText, maskedUserText } = req.body;
+        const { userId, userName, recordTime, userText, maskedUserText, password } = req.body;
         const newPost = new Post({
             userId, 
             userName,
             recordTime,
             userText,
-            maskedUserText
+            maskedUserText,
+            password
         });
        await Post.create(newPost); //no need const something = await ... res.json matters
        res.json({message: 'Post created successfully.'}); //without res.json, then block at Vue won't work 

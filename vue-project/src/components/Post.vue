@@ -3,13 +3,14 @@
         tweets: Array
     });
 
-    import { ref, defineExpose, onMounted } from 'vue';
+    import { ref, defineExpose, onMounted, watch } from 'vue';
     import axios from 'axios';
     //import { Post } from '../../../backend/src/models/Post' //ES6 syntax 
     //const Post = require('../models/Post.js'); before ES6 syntax  
 
     //datas
     let entryTextarea = ref(null);
+    let entryPassword = ref(null);
     let request = {
         userId: '',
         userName: '',
@@ -19,6 +20,11 @@
     };
     let posts = ref([]); 
     let post = ref({});
+    let passwordInput = ref(null);
+    let givenPassword = '';
+    let retrievedPassword = '';
+    let isPasswordCorrect = false;
+    let isPasswordEntered = false;
 
     //to declare reactive state is using ref() function 
     //ref() takes argument(=initial value) and returns ref object with a value property 
@@ -30,7 +36,15 @@
     //methods  
     const reset = () => {
         entryTextarea.value.value = '';
+        entryPassword.value.value = '';
     };
+    const resetPassword = () => {
+        passwordInput.value.value = ''; //passwordInput.value = input element
+        retrievedPassword = '';
+        givenPassword = '';
+        isPasswordCorrect = false;
+        isPasswordEntered = false;
+    }
     const fetchPosts = () => {
         axios.get('http://localhost:3000/posts')
         .then(response => { 
@@ -42,12 +56,12 @@
         request.userId = '@admin';
         request.userName = 'admin';
         request.recordTime = new Date();
-        request.maskedUserText = maskString(request.userText);
+        request.userText = request.userText.trim();
+        request.maskedUserText = maskString(request.userText.trim());
 
         console.log('request before call', request);
         axios.post('http://localhost:3000/posts', request)
         .then(() => {
-            request.userText = '';
             fetchPosts();
         });
     }
@@ -57,9 +71,14 @@
         console.log(url);
         return url;
     }
-    const showTweet = () => {
-        //reveal the masked 
-        //this new page will be landing page 
+    const showTweet = (id) => {
+        isPasswordCorrect = false;
+        axios.get(`http://localhost:3000/post/${id}`)
+        .then(response => { 
+            post.value = response.data;
+            console.log(post.value);
+            retrievedPassword = post.value.password;
+        });
     }
     const postItem = () => {
         //TODO: access twitter 
@@ -73,7 +92,20 @@
     }
     const maskString = (beforeString) => {
         return beforeString.replace(/\[(.*?)\]/g, (_, match) => '*'.repeat(match.length));
-
+    }
+    const comparePassword = () => {
+        console.log('given', givenPassword);
+        console.log('retrieved', retrievedPassword);
+        isPasswordEntered = true;
+        console.log('isPasswordEntered', isPasswordEntered);
+        isPasswordCorrect = givenPassword == retrievedPassword ? true : false; 
+        if (isPasswordCorrect) {
+                //$('#passwordModal').modal('hide');
+                console.log('isPasswordCorrect', isPasswordCorrect);
+        }
+        else {
+            console.log('isPasswordCorrect', isPasswordCorrect);
+        } 
     }
 
     //expose them to its parent component 
@@ -96,7 +128,8 @@
                     </div>
                 </div>
                 <div class="row fs-6">
-                    <div class="col">{{ post.maskedUserText }}</div>
+                    <div v-if="!isPasswordCorrect" class="col">{{ post.maskedUserText }}</div>
+                    <div v-else class="col">{{ post.userText }}</div>
                 </div>
                 <div class="d-flex justify-content-start">
                     <div class="mr-2">
@@ -106,7 +139,7 @@
                         <font-awesome-icon icon="fa-copy" @click="copyEntry(post)"></font-awesome-icon><span class="fs-6 fw-light"> copy</span>
                     </div>
                     <div class="ml-2">
-                        <font-awesome-icon icon="fa-share-from-square" @click="grabURL(post._id)"></font-awesome-icon><span class="fs-6 fw-light"> show tweet</span>
+                        <font-awesome-icon icon="fa-share-from-square" data-bs-toggle="modal" data-bs-target="#passwordModal" @click="showTweet(post._id)"></font-awesome-icon><span class="fs-6 fw-light"> show tweet</span>
                     </div>
                 </div>
             </article>
@@ -114,18 +147,43 @@
     </ul>
 
     <!-- entry modal -->
-    <div class="modal" tabindex="-1" id="entryModal" v-if="showModal = true">
+    <div class="modal" tabindex="-1" id="entryModal">
         <div class="modal-dialog">
             <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="reset"></button>
+                <div class="modal-header">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="reset()"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea v-model="request.userText" class="form-control" ref="entryTextarea" rows="3" placeholder="Wrap spoiler with '[' and ']'"></textarea>
+                    <div class="form-floating mt-2">
+                        <input id="password" type="password" v-model="request.password" class="form-control" ref="entryPassword"></input>
+                        <label for="password">Set the password for this tweet</label>     
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @click="saveEntry()">Post</button>
+                </div>
             </div>
-            <div class="modal-body">
-                <textarea v-model="request.userText" class="form-control" ref="entryTextarea" rows="3" placeholder="Wrap spoiler with '[' and ']'"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @click="saveEntry()">Post</button>
-            </div>
+        </div>
+    </div>
+
+    <!-- password modal -->
+    <div class="modal" tabindex="-1" id="passwordModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="resetPassword()"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-floating mt-2">
+                        <input type="text" v-model="givenPassword" class="form-control" ref="passwordInput"></input>
+                        <label for="password">Enter password</label>
+                    </div>
+                    <small class="text-danger" v-if="isPasswordEntered && !isPasswordCorrect">Incorrect password!</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @click="comparePassword()">Submit</button>
+                </div>
             </div>
         </div>
     </div>
